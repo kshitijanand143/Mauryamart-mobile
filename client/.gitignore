@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+
+# Environment files
+.env
+.env.*
+
+# Build output
+dist/
+build/
+
+# Logs
+logs/
+*.log
+
+# IDE
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Cache
+.cache/
+.vite/
+
+# Coverage
+coverage/
+
+# Uploads
+uploads/
+
+# Firebase keys
+serviceAccountKey.json
+firebase-adminsdk*.json
+
+# Expo
+.expo/
+.expo-shared/
