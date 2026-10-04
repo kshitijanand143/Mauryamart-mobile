@@ -7,19 +7,26 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+
     "splash": {
-      "image": "./assets/icon.png",
+      "image": "./assets/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#f97316"
     },
-    "assetBundlePatterns": ["**/*"],
+
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+
     "android": {
       "package": "com.mauryamart.client",
       "versionCode": 2,
+
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#f97316"
       },
+
       "permissions": [
         "android.permission.INTERNET",
         "android.permission.ACCESS_NETWORK_STATE",
@@ -35,16 +42,15 @@
         "android.permission.VIBRATE",
         "android.permission.POST_NOTIFICATIONS"
       ],
-      "compileSdkVersion": 36,
-      "targetSdkVersion": 36,
-      "minSdkVersion": 24,
-      "edgeToEdgeEnabled": true,
+
       "allowBackup": false
     },
+
     "plugins": [
       "expo-notifications",
       "expo-camera",
       "expo-location",
+
       [
         "expo-splash-screen",
         {
@@ -52,10 +58,25 @@
           "image": "./assets/splash.png",
           "imageWidth": 200
         }
+      ],
+
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 36,
+            "targetSdkVersion": 36,
+            "minSdkVersion": 24
+          }
+        }
       ]
     ],
+
     "scheme": "mauryamart",
+
     "extra": {
+      "apiUrl": "https://api.mauryamart.in",
+
       "eas": {
         "projectId": "a99de3c1-44d8-47d2-b92e-bfb929076776"
       }
