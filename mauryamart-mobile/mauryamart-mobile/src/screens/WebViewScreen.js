@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback, useEffect } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -12,11 +12,11 @@ import LoadingIndicator from '../components/LoadingIndicator';
 import OfflineScreen from '../components/OfflineScreen';
 
 export default function WebViewScreen({ isConnected }) {
-  const webViewRef   = useRef(null);
-  const [loading,    setLoading]   = useState(true);
-  const [canGoBack,  setCanGoBack] = useState(false);
+  const webViewRef = useRef(null);
+  const [loading, setLoading] = useState(true);
+  const [canGoBack, setCanGoBack] = useState(false);
 
-  // Back button
+  // Back button handling with modern subscription cleanup
   useEffect(() => {
     const onBack = () => {
       if (canGoBack && webViewRef.current) {
@@ -33,8 +33,16 @@ export default function WebViewScreen({ isConnected }) {
       );
       return true;
     };
-    BackHandler.addEventListener('hardwareBackPress', onBack);
-    return () => BackHandler.removeEventListener('hardwareBackPress', onBack);
+
+    const subscription = BackHandler.addEventListener('hardwareBackPress', onBack);
+    
+    return () => {
+      if (subscription && typeof subscription.remove === 'function') {
+        subscription.remove();
+      } else {
+        BackHandler.removeEventListener('hardwareBackPress', onBack);
+      }
+    };
   }, [canGoBack]);
 
   const handleNavigation = (request) => {
@@ -91,5 +99,5 @@ export default function WebViewScreen({ isConnected }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#ffffff' },
-  webview:   { flex: 1 },
+  webview: { flex: 1 },
 });
