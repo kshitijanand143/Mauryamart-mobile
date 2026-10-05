@@ -16,7 +16,7 @@ export default function WebViewScreen({ isConnected }) {
   const [loading, setLoading] = useState(true);
   const [canGoBack, setCanGoBack] = useState(false);
 
-  // Back button handling with modern subscription cleanup
+  // Back button handling with modern safe subscription cleanup
   useEffect(() => {
     const onBack = () => {
       if (canGoBack && webViewRef.current) {
@@ -36,10 +36,11 @@ export default function WebViewScreen({ isConnected }) {
 
     const subscription = BackHandler.addEventListener('hardwareBackPress', onBack);
     
+    // Safe cleanup to completely prevent "undefined is not a function" crash
     return () => {
       if (subscription && typeof subscription.remove === 'function') {
         subscription.remove();
-      } else {
+      } else if (BackHandler.removeEventListener) {
         BackHandler.removeEventListener('hardwareBackPress', onBack);
       }
     };
