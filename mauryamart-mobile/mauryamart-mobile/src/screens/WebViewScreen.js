@@ -87,7 +87,7 @@ export default function WebViewScreen({ isConnected = true }) {
         onLoadStart={() => setLoading(true)}
         onLoadEnd={() => setLoading(false)}
         onNavigationStateChange={(state) => setCanGoBack(state.canGoBack)}
-        onShouldStartLoadWithRequest={handleNavigation}
+       
         onError={() => setLoading(false)}
         androidHardwareAccelerationDisabled={false}
         overScrollMode="never"
