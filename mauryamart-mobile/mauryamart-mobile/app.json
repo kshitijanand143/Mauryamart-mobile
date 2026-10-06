@@ -46,29 +46,32 @@
       "allowBackup": false
     },
 
-    "plugins":
-  [
-    "react-native-webview",
-  [
-    "expo-splash-screen",
-    {
-      "backgroundColor": "#f97316",
-      "image": "./assets/splash.png",
-      "resizeMode": "cover",
-      "imageWidth": 400
-    }
-  ],
-  [
-    "expo-build-properties",
-    {
-      "android": {
-        "compileSdkVersion": 36,
-        "targetSdkVersion": 36,
-        "minSdkVersion": 24
-      }
-    }
-  ]
-],
+    "plugins": [
+      "expo-notifications",
+      "expo-camera",
+      "expo-location",
+
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#f97316",
+          "image": "./assets/splash.png",
+          "resizeMode": "cover",
+          "imageWidth": 200
+        }
+      ],
+
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 36,
+            "targetSdkVersion": 36,
+            "minSdkVersion": 24
+          }
+        }
+      ]
+    ],
 
     "scheme": "mauryamart",
 
