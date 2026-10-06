@@ -11,7 +11,7 @@ import { CONFIG } from '../config';
 import LoadingIndicator from '../components/LoadingIndicator';
 import OfflineScreen from '../components/OfflineScreen';
 
-export default function WebViewScreen({ isConnected }) {
+export default function WebViewScreen({ isConnected = true }) {
   const webViewRef = useRef(null);
   const [loading, setLoading] = useState(true);
   const [canGoBack, setCanGoBack] = useState(false);
