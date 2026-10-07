@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -7,7 +7,6 @@ import {
   Linking,
 } from 'react-native';
 import { WebView } from 'react-native-webview';
-import { useFocusEffect } from '@react-navigation/native';
 import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications';
 import { CONFIG } from '../config';
@@ -28,28 +27,27 @@ export default function WebViewScreen({ isConnected = true }) {
   const [loading, setLoading] = useState(true);
   const [canGoBack, setCanGoBack] = useState(false);
 
-  // ── Back button handling ──────────────────────────────────────────────────
-  useFocusEffect(
-    useCallback(() => {
-      const onBack = () => {
-        if (canGoBack && webViewRef.current) {
-          webViewRef.current.goBack();
-          return true;
-        }
-        Alert.alert(
-          'Exit App',
-          'Are you sure you want to exit Mauryamart?',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Exit', style: 'destructive', onPress: () => BackHandler.exitApp() },
-          ]
-        );
+  // ── Safe Back button handling (No navigation dependency) ────────────────
+  useEffect(() => {
+    const onBack = () => {
+      if (canGoBack && webViewRef.current) {
+        webViewRef.current.goBack();
         return true;
-      };
-      const subscription = BackHandler.addEventListener('hardwareBackPress', onBack);
-      return () => subscription.remove();
-    }, [canGoBack])
-  );
+      }
+      Alert.alert(
+        'Exit App',
+        'Are you sure you want to exit Mauryamart?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Exit', style: 'destructive', onPress: () => BackHandler.exitApp() },
+        ]
+      );
+      return true;
+    };
+
+    const subscription = BackHandler.addEventListener('hardwareBackPress', onBack);
+    return () => subscription.remove();
+  }, [canGoBack]);
 
   // ── Handle external URLs ──────────────────────────────────────────────────
   const handleNavigation = (request) => {
