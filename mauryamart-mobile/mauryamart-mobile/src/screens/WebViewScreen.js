@@ -9,8 +9,6 @@ import {
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 
-const APP_URL = 'https://mauryamart.in';
-
 export default function WebViewScreen() {
   const ref      = useRef(null);
   const [loading,   setLoading]   = useState(true);
@@ -35,22 +33,20 @@ export default function WebViewScreen() {
   const onRequest = (req) => {
     const { url } = req;
     if (url.startsWith('tel:') || url.startsWith('mailto:')) {
-      Linking.openURL(url);
-      return false;
+      Linking.openURL(url); return false;
     }
     if (url.includes('wa.me') || url.startsWith('upi://') || url.startsWith('gpay://')) {
-      Linking.openURL(url).catch(() => {});
-      return false;
+      Linking.openURL(url).catch(() => {}); return false;
     }
     return true;
   };
 
   return (
-    <View style={s.container}>
+    <View style={{ flex: 1 }}>
       <WebView
         ref={ref}
-        source={{ uri: APP_URL }}
-        style={s.web}
+        source={{ uri: 'https://mauryamart.in' }}
+        style={{ flex: 1 }}
         javaScriptEnabled
         domStorageEnabled
         geolocationEnabled
@@ -65,24 +61,14 @@ export default function WebViewScreen() {
         onNavigationStateChange={st => setCanGoBack(st.canGoBack)}
         onShouldStartLoadWithRequest={onRequest}
         onError={() => setLoading(false)}
-        onHttpError={() => setLoading(false)}
       />
       {loading && (
-        <View style={s.loader}>
-          <ActivityIndicator size="large" color="#f97316" />
+        <View style={StyleSheet.absoluteFill}>
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
+            <ActivityIndicator size="large" color="#f97316" />
+          </View>
         </View>
       )}
     </View>
   );
 }
-
-const s = StyleSheet.create({
-  container: { flex: 1 },
-  web:       { flex: 1 },
-  loader: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: 'center',
-    alignItems:     'center',
-    backgroundColor: '#fff',
-  },
-});
