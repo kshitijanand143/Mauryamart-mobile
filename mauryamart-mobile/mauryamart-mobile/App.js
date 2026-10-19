@@ -1,59 +1,83 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { StyleSheet, View, StatusBar, Text, TouchableOpacity } from 'react-native';
+import { View, StatusBar } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import * as SplashScreen from 'expo-splash-screen';
 import NetInfo from '@react-native-community/netinfo';
 import WebViewScreen from './src/screens/WebViewScreen';
+import OfflineScreen from './src/components/OfflineScreen';
+import { CONFIG } from './src/config';
 
-SplashScreen.preventAutoHideAsync();
-
-function OfflineScreen({ onRetry }) {
-  return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 }}>
-      <Text style={{ fontSize: 64, marginBottom: 16 }}>📡</Text>
-      <Text style={{ fontSize: 22, fontWeight: '700', color: '#111', marginBottom: 8 }}>No Internet</Text>
-      <Text style={{ fontSize: 15, color: '#666', marginBottom: 32, textAlign: 'center' }}>Please check your connection</Text>
-      <TouchableOpacity onPress={onRetry} style={{ backgroundColor: '#f97316', paddingHorizontal: 40, paddingVertical: 14, borderRadius: 16 }}>
-        <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>Try Again</Text>
-      </TouchableOpacity>
-    </View>
-  );
-}
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function App() {
-  const [ready,       setReady]       = useState(false);
+  const [ready, setReady] = useState(false);
   const [isConnected, setIsConnected] = useState(true);
 
   useEffect(() => {
+    let unsubscribe = null;
+    let mounted = true;
+
     const init = async () => {
       try {
         const state = await NetInfo.fetch();
-        setIsConnected(state.isConnected ?? true);
-        NetInfo.addEventListener(s => setIsConnected(s.isConnected ?? true));
-      } catch {}
-      finally { setReady(true); }
+        if (mounted) {
+          setIsConnected(state.isConnected !== false);
+        }
+        unsubscribe = NetInfo.addEventListener((s) => {
+          if (mounted) {
+            setIsConnected(s.isConnected !== false);
+          }
+        });
+      } catch {
+        if (mounted) setIsConnected(true);
+      } finally {
+        if (mounted) setReady(true);
+      }
     };
+
     init();
+
+    return () => {
+      mounted = false;
+      if (typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
+    };
   }, []);
 
+  useEffect(() => {
+    if (ready) {
+      SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [ready]);
+
   const onLayout = useCallback(async () => {
-    if (ready) await SplashScreen.hideAsync();
+    if (ready) {
+      await SplashScreen.hideAsync().catch(() => {});
+    }
   }, [ready]);
 
   if (!ready) return null;
 
   return (
     <SafeAreaProvider>
-      <View style={{ flex: 1, backgroundColor: '#f97316' }} onLayout={onLayout}>
-        <StatusBar backgroundColor="#f97316" barStyle="light-content" translucent={false} />
+      <View style={{ flex: 1, backgroundColor: CONFIG.THEME_COLOR }} onLayout={onLayout}>
+        <StatusBar backgroundColor={CONFIG.THEME_COLOR} barStyle="light-content" translucent={false} />
         <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }} edges={['top', 'bottom']}>
-          {isConnected
-            ? <WebViewScreen />
-            : <OfflineScreen onRetry={async () => {
-                const s = await NetInfo.fetch();
-                setIsConnected(s.isConnected ?? false);
-              }} />
-          }
+          {isConnected ? (
+            <WebViewScreen />
+          ) : (
+            <OfflineScreen
+              onRetry={async () => {
+                try {
+                  const s = await NetInfo.fetch();
+                  setIsConnected(s.isConnected !== false);
+                } catch {
+                  setIsConnected(true);
+                }
+              }}
+            />
+          )}
         </SafeAreaView>
       </View>
     </SafeAreaProvider>

@@ -2,7 +2,7 @@
   "expo": {
     "name": "Mauryamart",
     "slug": "mauryamart",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "splash": {
@@ -12,7 +12,7 @@
     },
     "android": {
       "package": "com.mauryamart.client",
-      "versionCode": 10,
+      "versionCode": 11,
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#f97316"
@@ -21,6 +21,7 @@
         "android.permission.INTERNET",
         "android.permission.ACCESS_NETWORK_STATE",
         "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.CAMERA",
         "android.permission.READ_MEDIA_IMAGES",
         "android.permission.CALL_PHONE"
@@ -29,8 +30,9 @@
     "plugins": ["react-native-webview"],
     "extra": {
       "eas": {
-        "projectId": "a99de3c1-44d8-47d2-b92e-bfb929076776"
+        "projectId":"33efada5-3cf6-43f6-ba4b-c879c92e915a"
       }
-    }
+    },
+     "owner": "fastapro3011s-team"
   }
 }
