@@ -27,12 +27,23 @@
         "android.permission.CALL_PHONE"
       ]
     },
-    "plugins": ["react-native-webview"],
+    "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 34,
+            "targetSdkVersion": 34,
+            "minSdkVersion": 24
+          }
+        }
+      ]
+    ],
     "extra": {
       "eas": {
-        "projectId":"33efada5-3cf6-43f6-ba4b-c879c92e915a"
+        "projectId": "33efada5-3cf6-43f6-ba4b-c879c92e915a"
       }
     },
-     "owner": "fastapro3011s-team"
+    "owner": "fastapro3011s-team"
   }
 }

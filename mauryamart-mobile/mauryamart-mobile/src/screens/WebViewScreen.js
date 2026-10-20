@@ -50,16 +50,40 @@ export default function WebViewScreen() {
   const canGoBackRef = useRef(false);
   const currentPathRef = useRef('/');
 
-  const [initialLoading, setInitialLoading] = useState(true);
-  const [hasError, setHasError] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState('');
 
-  // Safety fallback so initial loading spinner never gets stuck on screen
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setInitialLoading(false);
-    }, 8000);
-    return () => clearTimeout(timer);
+  const showNavigationError = useCallback((message) => {
+    setIsLoading(false);
+    setErrorMessage(message);
   }, []);
+
+  const isTrustedInAppUrl = useCallback((url) => {
+    try {
+      const parsed = new URL(url);
+      const hostname = parsed.hostname.toLowerCase();
+      const isMauryaMart = hostname === 'mauryamart.in' || hostname.endsWith('.mauryamart.in');
+      const isCashfree = hostname === 'cashfree.com' || hostname.endsWith('.cashfree.com');
+      return parsed.protocol === 'https:' && (isMauryaMart || isCashfree);
+    } catch {
+      return false;
+    }
+  }, []);
+
+  const openExternalUrl = useCallback((url) => {
+    Linking.openURL(url).catch(() => {
+      Alert.alert('Unable to open link', 'Check your connection or try again later.');
+    });
+  }, []);
+
+  // Turn an indefinitely loading page into an actionable error with a working retry.
+  useEffect(() => {
+    if (!isLoading || errorMessage) return undefined;
+    const timer = setTimeout(() => {
+      showNavigationError('MauryaMart is taking too long to respond. Check your connection and retry.');
+    }, 30000);
+    return () => clearTimeout(timer);
+  }, [errorMessage, isLoading, showNavigationError]);
 
   // React Native 0.74+ compatible BackHandler subscription (.remove() instead of removed removeEventListener)
   useEffect(() => {
@@ -84,39 +108,33 @@ export default function WebViewScreen() {
     const url = req?.url || '';
     if (!url) return false;
 
-    // Allow internal web URLs and standard web schemes inside the WebView
-    if (
-      url.startsWith('http://') ||
-      url.startsWith('https://') ||
-      url.startsWith('about:') ||
-      url.startsWith('blob:') ||
-      url.startsWith('data:')
-    ) {
-      // Open WhatsApp links in external WhatsApp app if clicked
-      if (url.includes('wa.me/') || url.includes('api.whatsapp.com/')) {
-        Linking.openURL(url).catch(() => {});
-        return false;
-      }
+    if (isTrustedInAppUrl(url)) {
       return true;
     }
 
-    // Handle external deep links (phone call, email, UPI payment apps, WhatsApp)
-    if (
-      url.startsWith('tel:') ||
-      url.startsWith('mailto:') ||
-      url.startsWith('upi:') ||
-      url.startsWith('gpay:') ||
-      url.startsWith('phonepe:') ||
-      url.startsWith('paytmmp:') ||
-      url.startsWith('whatsapp:') ||
-      url.startsWith('intent:')
-    ) {
-      Linking.openURL(url).catch(() => {});
+    if (url.startsWith('https://') || url.startsWith('http://') ||
+        /^(tel|mailto|upi|gpay|phonepe|paytmmp|whatsapp|intent|sms|geo):/i.test(url)) {
+      openExternalUrl(url);
       return false;
     }
 
-    return true;
-  }, []);
+    return false;
+  }, [isTrustedInAppUrl, openExternalUrl]);
+
+  const handleOpenWindow = useCallback((event) => {
+    const url = event?.nativeEvent?.targetUrl || '';
+    if (!url) return;
+
+    if (isTrustedInAppUrl(url)) {
+      webViewRef.current?.injectJavaScript(`window.location.href = ${JSON.stringify(url)}; true;`);
+      return;
+    }
+
+    if (url.startsWith('https://') || url.startsWith('http://') ||
+        /^(tel|mailto|upi|gpay|phonepe|paytmmp|whatsapp|intent|sms|geo):/i.test(url)) {
+      openExternalUrl(url);
+    }
+  }, [isTrustedInAppUrl, openExternalUrl]);
 
   const handleNavigationStateChange = useCallback((navState) => {
     canGoBackRef.current = Boolean(navState.canGoBack);
@@ -126,9 +144,7 @@ export default function WebViewScreen() {
         currentPathRef.current = parsed.pathname || '/';
       } catch {}
     }
-    if (!navState.loading) {
-      setInitialLoading(false);
-    }
+    setIsLoading(Boolean(navState.loading));
   }, []);
 
   const handleMessage = useCallback((event) => {
@@ -142,23 +158,56 @@ export default function WebViewScreen() {
   }, []);
 
   const handleRetry = () => {
-    setHasError(false);
-    setInitialLoading(true);
+    setErrorMessage('');
+    setIsLoading(true);
     webViewRef.current?.reload();
   };
 
-  if (hasError) {
-    return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorIcon}>⚠️</Text>
-        <Text style={styles.errorTitle}>Could not load Mauryamart</Text>
-        <Text style={styles.errorSub}>Please check your internet connection and try again.</Text>
-        <TouchableOpacity style={styles.retryBtn} onPress={handleRetry}>
-          <Text style={styles.retryText}>Reload</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
+  const handleHttpError = useCallback((event) => {
+    const { nativeEvent } = event;
+    const statusCode = nativeEvent?.statusCode;
+    const url = nativeEvent?.url || '';
+    const isApi = url.startsWith('https://api.mauryamart.in/');
+    const isCashfree = (() => {
+      try {
+        const hostname = new URL(url).hostname.toLowerCase();
+        return hostname === 'cashfree.com' || hostname.endsWith('.cashfree.com');
+      } catch {
+        return false;
+      }
+    })();
+
+    const isApiSessionError = isApi && (statusCode === 401 || statusCode === 403);
+    if (nativeEvent?.isForMainFrame === false &&
+        !(isApi && (statusCode >= 500 || isApiSessionError))) return;
+
+    if (isCashfree) {
+      showNavigationError('The payment page could not be reached. No payment has been confirmed; return to your order and check its status before trying again.');
+    } else if (statusCode === 401 || statusCode === 403) {
+      showNavigationError('Your session may have expired. Sign in again, then retry this page.');
+    } else if (statusCode >= 500) {
+      showNavigationError('MauryaMart services are temporarily unavailable. Your order or payment has not been confirmed; please retry later.');
+    } else {
+      showNavigationError(`MauryaMart could not load this page (HTTP ${statusCode || 'error'}). Please retry.`);
+    }
+  }, [showNavigationError]);
+
+  const handleLoadError = useCallback((event) => {
+    const { nativeEvent } = event;
+    if (nativeEvent?.isTopFrame === false) return;
+
+    const description = (nativeEvent?.description || '').toLowerCase();
+    if (description.includes('err_internet_disconnected') ||
+        description.includes('err_network_changed')) {
+      showNavigationError('Internet connection unavailable. Check your connection and retry.');
+    } else if (description.includes('err_name_not_resolved') ||
+               description.includes('err_connection_refused') ||
+               description.includes('err_timed_out')) {
+      showNavigationError('MauryaMart could not reach the website. The server may be temporarily unavailable; please retry.');
+    } else {
+      showNavigationError('MauryaMart could not load this page. Check your connection and retry.');
+    }
+  }, [showNavigationError]);
 
   return (
     <View style={styles.container}>
@@ -177,31 +226,41 @@ export default function WebViewScreen() {
         geolocationEnabled={true}
         allowsInlineMediaPlayback={true}
         mediaPlaybackRequiresUserAction={false}
-        mixedContentMode="always"
+        mixedContentMode="never"
+        allowFileAccess={false}
+        allowFileAccessFromFileURLs={false}
+        allowUniversalAccessFromFileURLs={false}
         overScrollMode="never"
-        setSupportMultipleWindows={false}
+        setSupportMultipleWindows={true}
         injectedJavaScript={SPA_NAVIGATION_BRIDGE}
         onMessage={handleMessage}
-        onLoadProgress={({ nativeEvent }) => {
-          if (nativeEvent.progress >= 0.75) {
-            setInitialLoading(false);
-          }
+        onOpenWindow={handleOpenWindow}
+        onLoadStart={() => {
+          setErrorMessage('');
+          setIsLoading(true);
         }}
-        onLoadEnd={() => setInitialLoading(false)}
+        onLoadEnd={() => setIsLoading(false)}
         onNavigationStateChange={handleNavigationStateChange}
         onShouldStartLoadWithRequest={handleShouldStartLoad}
-        onError={(syntheticEvent) => {
-          const { nativeEvent } = syntheticEvent;
-          setInitialLoading(false);
-          // Only show error screen if the main frame failed to load
-          if (nativeEvent?.isTopFrame !== false && !nativeEvent?.url?.includes('favicon')) {
-            setHasError(true);
-          }
+        onError={handleLoadError}
+        onHttpError={handleHttpError}
+        onRenderProcessGone={() => {
+          showNavigationError('The MauryaMart page stopped unexpectedly. Reload it to continue.');
         }}
       />
-      {initialLoading && (
+      {isLoading && !errorMessage && (
         <View style={styles.loaderOverlay} pointerEvents="none">
           <ActivityIndicator size="large" color={CONFIG.THEME_COLOR} />
+        </View>
+      )}
+      {!!errorMessage && (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorIcon}>!</Text>
+          <Text style={styles.errorTitle}>Unable to continue</Text>
+          <Text style={styles.errorSub}>{errorMessage}</Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={handleRetry}>
+            <Text style={styles.retryText}>Retry</Text>
+          </TouchableOpacity>
         </View>
       )}
     </View>
@@ -230,7 +289,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
   },
   errorIcon: {
-    fontSize: 56,
+    fontSize: 48,
+    fontWeight: '700',
+    color: '#f97316',
     marginBottom: 16,
   },
   errorTitle: {

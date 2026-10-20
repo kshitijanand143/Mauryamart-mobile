@@ -1,0 +1,5 @@
+../server
+../vendor-panel
+../admin-panel
+logs/
+*.log
